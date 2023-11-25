@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/purple_gray">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textColor="@color/black"
+        android:textStyle="bold" />
+
+    <TextView
+    android:id="@+id/dateTextView"
+    android:layout_width="376dp"
+    android:layout_height="wrap_content"
+    android:layout_below="@id/titleTextView"
+    android:layout_marginTop="8dp"
+    android:textColor="@color/black" />
+
+    <EditText
+        android:id="@+id/editTextDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dateTextView"
+        android:layout_marginTop="16dp"
+        android:inputType="textMultiLine"
+        android:lines="4"
+        android:textColor="@color/black"
+        android:hint="Введите описание"
+        android:background="@android:color/transparent" />
+
+    <Button
+        android:id="@+id/saveButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/editTextDescription"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="20dp"
+        android:text="Сохранить" />
+
+    <Button
+        android:id="@+id/backButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/editTextDescription"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="20dp"
+        android:text="Назад" />
+
+</RelativeLayout>
