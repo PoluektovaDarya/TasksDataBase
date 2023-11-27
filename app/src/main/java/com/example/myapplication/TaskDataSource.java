@@ -28,38 +28,44 @@ public class TaskDataSource {
         dbHelper.close();
     }
 
-    public void addTask(Task task) {
+    public void addTask(TaskModel taskModel) {
         ContentValues values = new ContentValues();
-        values.put(DBHelper.COLUMN_TITLE, task.getTitle());
-        values.put(DBHelper.COLUMN_DATE, task.getDateTime());
-        values.put(DBHelper.COLUMN_DESCRIPTION, task.getDescription() != null ? task.getDescription() : "");
+        values.put(DBHelper.COLUMN_TITLE, taskModel.getTitle());
+        values.put(DBHelper.COLUMN_DATE, taskModel.getDateTime());
+        values.put(DBHelper.COLUMN_DESCRIPTION, taskModel.getDescription() != null ? taskModel.getDescription() : "");
 
         long insertId = database.insert(DBHelper.TABLE_TASKS, null, values);
-        task.setId((int) insertId);
+        taskModel.setId((int) insertId);
     }
 
-    public List<Task> getAllTasks() {
-        List<Task> tasks = new ArrayList<>();
+    public List<TaskModel> getAllTasks() {
+        List<TaskModel> taskModels = new ArrayList<>();
+        try {
+            open();
 
-        Cursor cursor = database.query(DBHelper.TABLE_TASKS,
-                null, null, null, null, null, null);
+            Cursor cursor = database.query(DBHelper.TABLE_TASKS,
+                    null, null, null, null, null, null);
 
-        cursor.moveToFirst();
-        while (!cursor.isAfterLast()) {
-            Task task = cursorToTask(cursor);
-            tasks.add(task);
-            cursor.moveToNext();
+            cursor.moveToFirst();
+            while (!cursor.isAfterLast()) {
+                TaskModel taskModel = cursorToTask(cursor);
+                taskModels.add(taskModel);
+                cursor.moveToNext();
+            }
+            cursor.close();
+        } finally {
+            close();
         }
-
-        cursor.close();
-        return tasks;
+        return taskModels;
     }
+
     public void deleteTask(long taskId) {
         database.delete(DBHelper.TABLE_TASKS,
                 DBHelper.COLUMN_ID + " = ?",
                 new String[]{String.valueOf(taskId)});
     }
-    public Task getTaskById(int taskId) {
+
+    public TaskModel getTaskById(int taskId) {
         Cursor cursor = database.query(
                 DBHelper.TABLE_TASKS,
                 DBHelper.allColumns,
@@ -72,38 +78,38 @@ public class TaskDataSource {
 
         if (cursor != null) {
             cursor.moveToFirst();
-            Task task = cursorToTask(cursor);
+            TaskModel taskModel = cursorToTask(cursor);
             cursor.close();
-            return task;
+            return taskModel;
         } else {
             return null;
         }
     }
 
-    public void updateTask(Task currentTask) {
+    public void updateTask(TaskModel currentTaskModel) {
         ContentValues values = new ContentValues();
-        values.put(DBHelper.COLUMN_TITLE, currentTask.getTitle());
-        values.put(DBHelper.COLUMN_DATE, currentTask.getDateTime());
-        values.put(DBHelper.COLUMN_DESCRIPTION, currentTask.getDescription());
+        values.put(DBHelper.COLUMN_TITLE, currentTaskModel.getTitle());
+        values.put(DBHelper.COLUMN_DATE, currentTaskModel.getDateTime());
+        values.put(DBHelper.COLUMN_DESCRIPTION, currentTaskModel.getDescription());
 
         String selection = DBHelper.COLUMN_ID + " = ?";
-        String[] selectionArgs = {String.valueOf(currentTask.getId())};
+        String[] selectionArgs = {String.valueOf(currentTaskModel.getId())};
 
         database.update(DBHelper.TABLE_TASKS, values, selection, selectionArgs);
     }
 
     @SuppressLint("Range")
-    private Task cursorToTask(Cursor cursor) {
-        Task task = new Task();
-        task.setId((int) cursor.getLong(cursor.getColumnIndex(DBHelper.COLUMN_ID)));
-        task.setTitle(cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_TITLE)));
+    private TaskModel cursorToTask(Cursor cursor) {
+        int idIndex = cursor.getColumnIndex(DBHelper.COLUMN_ID);
+        int titleIndex = cursor.getColumnIndex(DBHelper.COLUMN_TITLE);
+        int dateIndex = cursor.getColumnIndex(DBHelper.COLUMN_DATE);
+        int descriptionIndex = cursor.getColumnIndex(DBHelper.COLUMN_DESCRIPTION);
 
-        long dateTime = cursor.getLong(cursor.getColumnIndex(DBHelper.COLUMN_DATE));
-        task.setDateTime(dateTime);
+        int id = cursor.getInt(idIndex);
+        String title = cursor.getString(titleIndex);
+        long dateTime = cursor.getLong(dateIndex);
+        String description = cursor.getString(descriptionIndex);
 
-        task.setDescription(cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_DESCRIPTION)));
-
-        return task;
+        return new TaskModel(id, title, description, dateTime);
     }
-
 }

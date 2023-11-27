@@ -1,11 +1,11 @@
 package com.example.myapplication;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +22,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -31,8 +33,9 @@ import java.util.Locale;
 public class TaskActivity extends AppCompatActivity {
 
     private TaskDataSource dataSource;
-    private ArrayAdapter<Task> adapter;
+    private ArrayAdapter<TaskModel> adapter;
     private static final int TASK_DETAIL_REQUEST_CODE = 1;
+    private int currentIdCounter = 1; // Счетчик id
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,9 +45,15 @@ public class TaskActivity extends AppCompatActivity {
         dataSource = new TaskDataSource(this);
         dataSource.open();
 
-        List<Task> tasks = dataSource.getAllTasks();
+        SyncFragment syncFragment = new SyncFragment(dataSource);
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction.replace(R.id.fragmentContainer, syncFragment);
+        transaction.commit();
 
-        adapter = new ArrayAdapter<Task>(this, R.layout.my_simple_list_item, tasks) {
+        List<TaskModel> taskModels = dataSource.getAllTasks();
+
+        adapter = new ArrayAdapter<TaskModel>(this, R.layout.my_simple_list_item, taskModels) {
             @NonNull
             @Override
             public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
@@ -56,11 +65,11 @@ public class TaskActivity extends AppCompatActivity {
                 TextView titleTextView = convertView.findViewById(R.id.titleTextView);
                 TextView dateTextView = convertView.findViewById(R.id.dateTextView);
 
-                Task task = getItem(position);
+                TaskModel taskModel = getItem(position);
 
                 if (titleTextView != null) {
-                    if (task != null && task.getTitle() != null) {
-                        titleTextView.setText(task.getTitle());
+                    if (taskModel != null && taskModel.getTitle() != null) {
+                        titleTextView.setText(taskModel.getTitle());
                     } else {
                         titleTextView.setText("Нет данных");
                     }
@@ -69,7 +78,7 @@ public class TaskActivity extends AppCompatActivity {
                 deleteButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        showDeleteConfirmationDialog(task);
+                        showDeleteConfirmationDialog(taskModel);
                     }
                 });
                 int startRedColor = Color.parseColor("#FF0000");
@@ -80,11 +89,11 @@ public class TaskActivity extends AppCompatActivity {
                 GradientDrawable greenGradient = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, new int[]{endColor, startGreenColor, endColor});
 
                 if (dateTextView != null) {
-                    if (task != null && task.getDueDate() != null) {
+                    if (taskModel != null && taskModel.getDueDate() != null) {
                         SimpleDateFormat dateFormat = new SimpleDateFormat("   dd.MM.yyyy", Locale.getDefault());
-                        dateTextView.setText(dateFormat.format(task.getDueDate()));
+                        dateTextView.setText(dateFormat.format(taskModel.getDueDate()));
 
-                        long daysUntilDue = calculateDaysUntilDue(task.getDueDate());
+                        long daysUntilDue = calculateDaysUntilDue(taskModel.getDueDate());
 
                         if (daysUntilDue <= 10) {
                             dateTextView.setBackground(redGradient);
@@ -105,17 +114,15 @@ public class TaskActivity extends AppCompatActivity {
             }
         };
 
-
         final ListView listView = findViewById(R.id.listView);
         listView.setAdapter(adapter);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Task selectedTask = adapter.getItem(position);
-                // Запускаем вторую активити с использованием startActivityForResult
+                TaskModel selectedTaskModel = adapter.getItem(position);
                 Intent intent = new Intent(TaskActivity.this, TaskDetailActivity.class);
-                intent.putExtra("taskId", selectedTask.getId());
+                intent.putExtra("taskId", selectedTaskModel.getId());
                 startActivity(intent);
             }
         });
@@ -131,30 +138,29 @@ public class TaskActivity extends AppCompatActivity {
                 if (title.trim().isEmpty()) {
                     Toast.makeText(TaskActivity.this, "Вы не ввели название", Toast.LENGTH_SHORT).show();
                 } else {
-                    // Создаем задачу и добавляем её только если введено хотя бы одно символ
                     long dateInMillis = System.currentTimeMillis();
-                    Task task = new Task(title, null, null, dateInMillis);
+                    TaskModel taskModel = new TaskModel(title, null, dateInMillis);
+                    currentIdCounter++;
 
-                    dataSource.addTask(task);
+                    dataSource.addTask(taskModel);
 
-                    adapter.add(task);
+                    adapter.add(taskModel);
                     adapter.notifyDataSetChanged();
 
                     titleEditText.setText("");
                 }
             }
         });
-
     }
 
-    private void showDeleteConfirmationDialog(final Task task) {
+    private void showDeleteConfirmationDialog(final TaskModel taskModel) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Удаление")
-                .setMessage("Вы точно хотите удалить \"" + task.getTitle() + "\"?")
+                .setMessage("Вы точно хотите удалить \"" + taskModel.getTitle() + "\"?")
                 .setPositiveButton("Да", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        dataSource.deleteTask(task.getId());
-                        adapter.remove(task);
+                        dataSource.deleteTask(taskModel.getId());
+                        adapter.remove(taskModel);
                         adapter.notifyDataSetChanged();
                     }
                 })
@@ -173,33 +179,19 @@ public class TaskActivity extends AppCompatActivity {
         if (requestCode == TASK_DETAIL_REQUEST_CODE && resultCode == RESULT_OK) {
             int taskId = data.getIntExtra("taskId", -1);
             if (taskId != -1) {
-                Task updatedTask = dataSource.getTaskById(taskId);
-                if (updatedTask != null) {
-                    // Обновляем задачу в списке
-                    int position = adapter.getPosition(updatedTask);
+                TaskModel updatedTaskModel = dataSource.getTaskById(taskId);
+                if (updatedTaskModel != null) {
+                    int position = adapter.getPosition(updatedTaskModel);
                     if (position != -1) {
-                        adapter.remove(updatedTask);
-                        adapter.insert(updatedTask, position);
+                        adapter.remove(updatedTaskModel);
+                        adapter.insert(updatedTaskModel, position);
                         adapter.notifyDataSetChanged();
                     }
                 }
             }
         }
     }
-    private Task getTaskWithUpdatedDate(Date updatedDate) {
-        for (int i = 0; i < adapter.getCount(); i++) {
-            Task task = adapter.getItem(i);
-            if (task != null && task.getDueDate() != null && task.getDueDate().equals(updatedDate)) {
-                task.setDate(updatedDate);
 
-                // Обновляем задачу в адаптере
-                adapter.notifyDataSetChanged();
-
-                return task;
-            }
-        }
-        return null;
-    }
     private long calculateDaysUntilDue(Date dueDate) {
         long currentTimeMillis = System.currentTimeMillis();
         long dueTimeMillis = dueDate.getTime();
@@ -209,12 +201,11 @@ public class TaskActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        List<Task> updatedTasks = dataSource.getAllTasks();
+        List<TaskModel> updatedTaskModels = dataSource.getAllTasks();
         adapter.clear();
-        adapter.addAll(updatedTasks);
+        adapter.addAll(updatedTaskModels);
         adapter.notifyDataSetChanged();
     }
-
 
     @Override
     protected void onPause() {

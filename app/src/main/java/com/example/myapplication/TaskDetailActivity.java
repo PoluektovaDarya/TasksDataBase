@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+import android.annotation.SuppressLint;
 import android.app.DatePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -20,11 +21,13 @@ import java.util.Locale;
 public class TaskDetailActivity extends AppCompatActivity {
 
     private TaskDataSource dataSource;
-    private Task currentTask;
+    private TaskModel currentTaskModel;
     private EditText editTextDescription;
     private TextView dateTextView;
+    private EditText titleEditText;
     private Calendar selectedDate;
 
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,34 +41,43 @@ public class TaskDetailActivity extends AppCompatActivity {
         setButtonClickListeners();
 
         editTextDescription = findViewById(R.id.editTextDescription);
-        initTaskData();
-        setButtonClickListeners();
+        titleEditText = findViewById(R.id.titleEditText);
+        dateTextView = findViewById(R.id.dateTextView);
+
+        updateDateTextView();
     }
 
     private void initViews() {
         editTextDescription = findViewById(R.id.editTextDescription);
         dateTextView = findViewById(R.id.dateTextView);
+        titleEditText = findViewById(R.id.titleEditText);
         dateTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 showDatePickerDialog();
             }
         });
+
+        titleEditText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                titleEditText.setFocusableInTouchMode(true);
+                titleEditText.setFocusable(true);
+            }
+        });
+
         // Инициализируем выбранную дату
         selectedDate = Calendar.getInstance();
+        updateDateTextView();
     }
+
     private void initTaskData() {
         Intent intent = getIntent();
         int taskId = intent.getIntExtra("taskId", -1);
 
-        currentTask = dataSource.getTaskById(taskId);
-        TextView titleTextView = findViewById(R.id.titleTextView);
-        titleTextView.setText(currentTask.getTitle());
-
-        // Отображаем текущую дату
-        updateDateTextView();
-
-        editTextDescription.setText(currentTask.getDescription());
+        currentTaskModel = dataSource.getTaskById(taskId);
+        titleEditText.setText(currentTaskModel.getTitle());
+        editTextDescription.setText(currentTaskModel.getDescription());
     }
 
     private void setButtonClickListeners() {
@@ -75,7 +87,6 @@ public class TaskDetailActivity extends AppCompatActivity {
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                updateDateOnFirstActivity();
                 finish();
             }
         });
@@ -84,10 +95,13 @@ public class TaskDetailActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 showSaveDialog();
+                saveTaskDescription();
                 updateDateOnFirstActivity();
+                updateDateTextView();
             }
         });
     }
+
     private void showDatePickerDialog() {
         int year = selectedDate.get(Calendar.YEAR);
         int month = selectedDate.get(Calendar.MONTH);
@@ -101,14 +115,10 @@ public class TaskDetailActivity extends AppCompatActivity {
                         selectedDate.set(Calendar.YEAR, year);
                         selectedDate.set(Calendar.MONTH, month);
                         selectedDate.set(Calendar.DAY_OF_MONTH, day);
-
-                        // Обновите поле с датой
-                        updateDateTextView();
                     }
                 },
                 year, month, day);
 
-        // Покажите диалог
         datePickerDialog.show();
     }
 
@@ -119,49 +129,53 @@ public class TaskDetailActivity extends AppCompatActivity {
                 .setPositiveButton("Да", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        saveTaskDescription();
+                        // Скрываем клавиатуру при сохранении
+                        titleEditText.setFocusable(false);
+                        titleEditText.setFocusableInTouchMode(false);
                     }
                 })
                 .setNegativeButton("Отмена", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        // ничего не делаем, оставляем окно открытым
+                        // Ничего не делаем, оставляем окно открытым
                     }
                 })
                 .show();
     }
+
     private void updateDateTextView() {
-        if (selectedDate != null) {
+        if (currentTaskModel != null && currentTaskModel.getDueDate() != null) {
             SimpleDateFormat dateFormat = new SimpleDateFormat(" dd.MM.yyyy", Locale.getDefault());
-            dateTextView.setText(dateFormat.format(selectedDate.getTime()));
+            dateTextView.setText(dateFormat.format(currentTaskModel.getDueDate()));
         }
     }
 
     private void saveTaskDescription() {
         String description = editTextDescription.getText().toString();
+        String title = titleEditText.getText().toString();
 
-        currentTask.setDescription(description);
+        currentTaskModel.setDescription(description);
+        currentTaskModel.setTitle(title);
 
         if (selectedDate != null) {
-            currentTask.setDate(selectedDate.getTime());
+            currentTaskModel.setDate(selectedDate.getTime());
         }
 
-        dataSource.updateTask(currentTask);
-
-        // Обновляем дату на первой активити
+        dataSource.updateTask(currentTaskModel);
         updateDateOnFirstActivity();
     }
+
     private void updateDateOnFirstActivity() {
         if (selectedDate != null) {
-            currentTask.setDate(selectedDate.getTime());
-            dataSource.updateTask(currentTask);
+            currentTaskModel.setDate(selectedDate.getTime());
+            dataSource.updateTask(currentTaskModel);
 
-            // Вместо использования setResult, передаем taskId напрямую
             Intent resultIntent = new Intent();
-            resultIntent.putExtra("taskId", currentTask.getId());
+            resultIntent.putExtra("taskId", currentTaskModel.getId());
             setResult(RESULT_OK, resultIntent);
         }
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
