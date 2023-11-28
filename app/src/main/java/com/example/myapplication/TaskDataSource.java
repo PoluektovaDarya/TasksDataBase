@@ -31,12 +31,18 @@ public class TaskDataSource {
     public void addTask(TaskModel taskModel) {
         ContentValues values = new ContentValues();
         values.put(DBHelper.COLUMN_TITLE, taskModel.getTitle());
+        values.put(DBHelper.COLUMN_DESCRIPTION, taskModel.getDescription());
         values.put(DBHelper.COLUMN_DATE, taskModel.getDateTime());
-        values.put(DBHelper.COLUMN_DESCRIPTION, taskModel.getDescription() != null ? taskModel.getDescription() : "");
 
-        long insertId = database.insert(DBHelper.TABLE_TASKS, null, values);
-        taskModel.setId((int) insertId);
+        try {
+            open();
+            long insertId = database.insert(DBHelper.TABLE_TASKS, null, values);
+            taskModel.setId((int) insertId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     public List<TaskModel> getAllTasks() {
         List<TaskModel> taskModels = new ArrayList<>();
@@ -60,9 +66,16 @@ public class TaskDataSource {
     }
 
     public void deleteTask(long taskId) {
-        database.delete(DBHelper.TABLE_TASKS,
-                DBHelper.COLUMN_ID + " = ?",
-                new String[]{String.valueOf(taskId)});
+        try {
+            open();
+            database.delete(DBHelper.TABLE_TASKS,
+                    DBHelper.COLUMN_ID + " = ?",
+                    new String[]{String.valueOf(taskId)});
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            close();
+        }
     }
 
     public TaskModel getTaskById(int taskId) {
@@ -111,5 +124,58 @@ public class TaskDataSource {
         String description = cursor.getString(descriptionIndex);
 
         return new TaskModel(id, title, description, dateTime);
+    }
+    @SuppressLint("Range")
+    public String getTitleFromDB() {
+        String title = null;
+        try {
+            open();
+
+            Cursor cursor = database.query(
+                    DBHelper.TABLE_TASKS,
+                    new String[]{DBHelper.COLUMN_TITLE},
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            if (cursor.moveToFirst()) {
+                title = cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_TITLE));
+            }
+
+            cursor.close();
+        } finally {
+            close();
+        }
+        return title;
+    }
+
+    @SuppressLint("Range")
+    public String getDescriptionFromDB() {
+        String description = null;
+        try {
+            open();
+
+            Cursor cursor = database.query(
+                    DBHelper.TABLE_TASKS,
+                    new String[]{DBHelper.COLUMN_DESCRIPTION},
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+
+            if (cursor.moveToFirst()) {
+                description = cursor.getString(cursor.getColumnIndex(DBHelper.COLUMN_DESCRIPTION));
+            }
+
+            cursor.close();
+        } finally {
+            close();
+        }
+        return description;
     }
 }

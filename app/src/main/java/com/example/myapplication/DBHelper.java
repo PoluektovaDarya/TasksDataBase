@@ -38,12 +38,12 @@ public class DBHelper extends SQLiteOpenHelper {
         database.execSQL(DATABASE_CREATE_TASKS);
         database.execSQL(DATABASE_CREATE_DESCRIPTION);
     }
-   /* @Override
+   /*@Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_TASKS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_DESCRIPTION);
         onCreate(db);
-    } */
+    }*/
    @Override
    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
        // Создаем временную таблицу tasks с новой схемой
