@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 
 import androidx.fragment.app.Fragment;
 
@@ -25,11 +26,8 @@ public class SyncFragment extends Fragment {
         this.dataSource = dataSource;
     }
 
-    // Переопределение метода onCreateView для инфляции макета фрагмента
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Инфлирование макета для данного фрагмента
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_sync, container, false);
 
         // Установка слушателя OnClickListener для кнопки syncButton в макете
@@ -44,7 +42,6 @@ public class SyncFragment extends Fragment {
         // Возврат инфлированного представления
         return view;
     }
-
     // Метод для синхронизации данных с сервера
     private void syncWithServer() {
         // Создание экземпляра ServerApiManager
@@ -90,7 +87,7 @@ public class SyncFragment extends Fragment {
 
         // Проход по списку задач с сервера и создание элементов в приложении
         for (TaskModel taskModel : serverTasks) {
-            // Вывод в лог данных о задаче, которую вы создаете
+            // Вывод в лог данных о задаче, которую создаем
             Log.d("SyncFragment", "Создание элемента на основе задачи с сервера: " + taskModel.getTitle());
 
             // Добавление задачи в локальную базу данных
@@ -109,24 +106,22 @@ public class SyncFragment extends Fragment {
 
         // Отправка отсутствующих задач на сервер
         for (TaskModel taskModel : missingTasks) {
-            apiManager.createTask(taskModel.getTitle(), taskModel.formatDateTimeToString(),
-                    new Callback<Void>() {
-                        @Override
-                        public void onResponse(Call<Void> call, Response<Void> response) {
-                            // Логирование успешной или неудачной отправки данных на сервер
-                            if (response.isSuccessful()) {
-                                Log.d("SyncFragment", "Данные успешно отправлены на сервер");
-                            } else {
-                                Log.e("SyncFragment", "Ошибка при отправке данных на сервер: " + response.message());
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<Void> call, Throwable t) {
-                            // Логирование неудачи при отправке данных на сервер
-                            Log.e("SyncFragment", "Ошибка при отправке данных на сервер: " + t.getMessage());
-                        }
-                    });
+            apiManager.createTask(taskModel.getTitle(), taskModel.formatDateTimeToString(), new Callback<Void>() {
+                @Override
+                public void onResponse(Call<Void> call, Response<Void> response) {
+                    // Логирование успешной или неудачной отправки данных на сервер
+                    if (response.isSuccessful()) {
+                        Log.d("SyncFragment", "Данные успешно отправлены на сервер");
+                    } else {
+                        Log.e("SyncFragment", "Ошибка при отправке данных на сервер: " + response.message());
+                    }
+                }
+                @Override
+                public void onFailure(Call<Void> call, Throwable t) {
+                    // Логирование неудачи при отправке данных на сервер
+                    Log.e("SyncFragment", "Ошибка при отправке данных на сервер: " + t.getMessage());
+                }
+            });
         }
     }
 

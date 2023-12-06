@@ -158,8 +158,21 @@ public class TaskActivity extends AppCompatActivity {
                 }
             }
         });
-    }
 
+        Button refrButton = findViewById(R.id.refrButton);
+        refrButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Вызываем метод для обновления активити
+                refreshActivity();
+            }
+        });
+    }
+    private void refreshActivity() {
+        // Создаем новый интент для пересоздания активити
+        finish();
+        startActivity(getIntent());
+    }
     // Метод для обновления пользовательского интерфейса с новой задачей
     public void updateUIWithNewTask(TaskModel newTask) {
         // Добавление новой задачи в список
