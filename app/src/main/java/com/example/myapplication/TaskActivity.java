@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -42,17 +43,21 @@ public class TaskActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_task);
 
+        // Инициализация источника данных
         dataSource = new TaskDataSource(this);
         dataSource.open();
 
+        // Добавление фрагмента SyncFragment в разметку
         SyncFragment syncFragment = new SyncFragment(dataSource);
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
         transaction.replace(R.id.fragmentContainer, syncFragment);
         transaction.commit();
 
+        // Получение списка задач из базы данных
         List<TaskModel> taskModels = dataSource.getAllTasks();
 
+        // Инициализация адаптера для списка задач
         adapter = new ArrayAdapter<TaskModel>(this, R.layout.my_simple_list_item, taskModels) {
             @NonNull
             @Override
@@ -117,6 +122,7 @@ public class TaskActivity extends AppCompatActivity {
         final ListView listView = findViewById(R.id.listView);
         listView.setAdapter(adapter);
 
+        // Обработка нажатия на элемент списка
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -129,6 +135,7 @@ public class TaskActivity extends AppCompatActivity {
 
         final EditText titleEditText = findViewById(R.id.titleEditText);
 
+        // Обработка нажатия на кнопку добавления задачи
         Button addButton = findViewById(R.id.addButton);
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -153,6 +160,38 @@ public class TaskActivity extends AppCompatActivity {
         });
     }
 
+    // Метод для обновления пользовательского интерфейса с новой задачей
+    public void updateUIWithNewTask(TaskModel newTask) {
+        // Добавление новой задачи в список
+        adapter.add(newTask);
+        adapter.notifyDataSetChanged();
+    }
+
+    // Метод для создания элементов в приложении на основе данных с сервера
+    private void createElementsFromServerData(List<TaskModel> serverTasks) {
+        // Вывод в лог о начале создания элементов на основе данных с сервера
+        Log.d("TaskActivity", "Начало создания элементов на основе данных с сервера");
+
+        // Проход по списку задач с сервера и создание элементов в приложении
+        for (TaskModel taskModel : serverTasks) {
+            // Вывод в лог данных о задаче, которую вы создаете
+            Log.d("TaskActivity", "Создание элемента на основе задачи с сервера: " + taskModel.getTitle());
+
+            // Добавьте ваш код для создания элементов в приложении на основе данных с сервера
+            // Например, добавьте их в вашу базу данных или отобразите на экране
+
+            // Пример: добавление задачи в локальную базу данных
+            dataSource.addTask(taskModel);
+
+            // Пример: обновление пользовательского интерфейса для отображения новой задачи
+            updateUIWithNewTask(taskModel);
+        }
+
+        // Вывод в лог об окончании создания элементов на основе данных с сервера
+        Log.d("TaskActivity", "Завершение создания элементов на основе данных с сервера");
+    }
+
+    // Отображение диалога подтверждения удаления
     private void showDeleteConfirmationDialog(final TaskModel taskModel) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Удаление")
@@ -192,12 +231,14 @@ public class TaskActivity extends AppCompatActivity {
         }
     }
 
+    // Рассчет количества дней до указанной даты
     private long calculateDaysUntilDue(Date dueDate) {
         long currentTimeMillis = System.currentTimeMillis();
         long dueTimeMillis = dueDate.getTime();
         return (dueTimeMillis - currentTimeMillis) / (24 * 60 * 60 * 1000);
     }
 
+    // Обновление списка задач при возврате на экран
     @Override
     protected void onResume() {
         super.onResume();
@@ -207,6 +248,7 @@ public class TaskActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
+    // Закрытие источника данных при выходе из активности
     @Override
     protected void onPause() {
         dataSource.close();
